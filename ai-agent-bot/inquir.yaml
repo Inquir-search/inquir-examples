@@ -1,0 +1,28 @@
+# An AI assistant for Telegram on aiogram 3 that answers through any
+# OpenAI-compatible Chat Completions API, built by the Dockerfile next to this
+# file. Settings are Variables of the app (TELEGRAM_BOT_TOKEN, OPENAI_API_KEY,
+# OPENAI_BASE_URL, MODEL, ALLOWED_USER_IDS, DATABASE_URL, ...): see bot.py.
+# Location: Telegram bots run in the Netherlands (Telegram-боты размещаются в
+# Нидерландах). The location is a setting of the app, not of this file: set it
+# once with `inquir apps update <app> --location nl` (or Settings -> Scale ->
+# Region in the dashboard) before the first deploy.
+version: 1
+services:
+  web:
+    build:
+      dockerfile: Dockerfile
+    runtime:
+      # GET /healthz answers 200 once Telegram accepted the token; in webhook
+      # mode Telegram posts updates to this port too.
+      port: 8080
+      resources:
+        memoryMb: 256
+        cpuVCpus: 0.25
+      healthcheck:
+        type: http
+        path: /healthz
+        intervalSeconds: 30
+        timeoutSeconds: 3
+      # One bot instance at a time: Telegram answers 409 Conflict to a second
+      # one polling the same token, so a redeploy stops the old one first.
+      deployStrategy: recreate

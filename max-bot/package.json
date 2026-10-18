@@ -1,0 +1,19 @@
+{
+  "name": "max-bot",
+  "version": "1.0.0",
+  "private": true,
+  "description": "MAX messenger bot on the official SDK: /start, /help, echo, notes in PostgreSQL",
+  "type": "module",
+  "main": "bot.mjs",
+  "scripts": {
+    "start": "node bot.mjs"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "dependencies": {
+    "@maxhub/max-bot-api": "1.0.2",
+    "pg": "8.23.1",
+    "undici": "7.30.1"
+  }
+}

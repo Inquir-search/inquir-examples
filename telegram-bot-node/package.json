@@ -1,0 +1,18 @@
+{
+  "name": "telegram-bot-node",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Telegram bot on grammY: /start, /help, echo, notes in PostgreSQL",
+  "type": "module",
+  "main": "bot.mjs",
+  "scripts": {
+    "start": "node bot.mjs"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "dependencies": {
+    "grammy": "1.46.0",
+    "pg": "8.23.1"
+  }
+}
