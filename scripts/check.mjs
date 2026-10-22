@@ -46,7 +46,7 @@ for (const name of examples) {
   const user = finalStage.filter((line) => line.startsWith('USER ')).at(-1);
   const unprivilegedBase = /^FROM nginxinc\/nginx-unprivileged:/.test(finalStage[0] ?? '');
   if (user ? /^USER (root|0)(:|$)/.test(user) : !unprivilegedBase) fail(name, 'the Dockerfile must end on a non-root USER');
-  for (const line of lines.filter((entry) => entry.startsWith('COPY ') && !entry.startsWith('COPY --from='))) {
+  for (const line of lines.filter((entry) => entry.startsWith('COPY ') && !/^COPY (--\S+ )*--from=/.test(entry))) {
     for (const source of line.replace(/^COPY /, '').split(/\s+/).slice(0, -1)) {
       if (source.startsWith('--')) continue;
       const found = source.includes('*')

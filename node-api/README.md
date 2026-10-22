@@ -4,7 +4,7 @@
 
 ## Русский
 
-API на [Express](https://expressjs.com) 5 (Node.js 22): `GET /api/hello`, проверка работоспособности `GET /healthz`, порт из переменной `PORT`, которую задаёт Inquir, и аккуратное завершение по SIGTERM. Fastify, Hono или NestJS — так же: меняется только `CMD`.
+API на [Express](https://expressjs.com) 5 (Node.js 22): `GET /api/hello`, проверка работоспособности `GET /healthz`, порт из переменной `PORT`, которую задаёт Inquir, и аккуратное завершение по SIGTERM. Fastify или Hono — так же: меняется только `CMD`.
 
 Пошагово, с подключением Postgres: [готовые рецепты](https://inquir.org/ru/docs/recipes#node-api).
 
@@ -33,7 +33,7 @@ npm start   # http://localhost:3000/api/hello
 
 ## English
 
-An [Express](https://expressjs.com) 5 API (Node.js 22): `GET /api/hello`, the health check `GET /healthz`, the port from the `PORT` variable Inquir sets, and a clean shutdown on SIGTERM. Fastify, Hono or NestJS work the same way: only `CMD` changes.
+An [Express](https://expressjs.com) 5 API (Node.js 22): `GET /api/hello`, the health check `GET /healthz`, the port from the `PORT` variable Inquir sets, and a clean shutdown on SIGTERM. Fastify or Hono work the same way: only `CMD` changes.
 
 Step by step, with Postgres: [deploy recipes](https://inquir.org/docs/recipes#node-api).
 
