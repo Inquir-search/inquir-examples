@@ -1,0 +1,11 @@
+version: 1
+services:
+  web:                      # always "web"
+    runtime:
+      port: 8000            # the port uvicorn listens on
+      healthcheck:
+        type: http
+        path: /healthz
+      resources:
+        cpuVCpus: 0.25
+        memoryMb: 256

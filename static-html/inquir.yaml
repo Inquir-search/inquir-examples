@@ -1,0 +1,11 @@
+version: 1
+services:
+  web:                      # always "web"
+    runtime:
+      port: 8080            # nginx listens here
+      healthcheck:
+        type: http
+        path: /             # the home page must answer
+      resources:
+        cpuVCpus: 0.25
+        memoryMb: 128
