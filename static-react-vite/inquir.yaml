@@ -1,0 +1,11 @@
+version: 1
+services:
+  web:                      # always "web"
+    runtime:
+      port: 8080            # the port nginx listens on (nginx.conf)
+      healthcheck:
+        type: http
+        path: /healthz
+      resources:            # plenty for a static site
+        cpuVCpus: 0.25
+        memoryMb: 128

@@ -1,7 +1,7 @@
 // Checks every example folder: run `node scripts/check.mjs` (or `make check`) before a pull request.
 //
 // - an inquir.yaml, a Dockerfile and a README.md (with Russian and English sections);
-// - every FROM pinned by digest, the last USER not root, every COPY source inside the folder;
+// - every FROM pinned by digest, the final stage not running as root, every COPY source inside the folder;
 // - Python: requirements.txt pinned with hashes and installed with --require-hashes; the code compiles;
 // - Node: exact versions in package.json, a package-lock.json with an integrity hash per package; node --check;
 // - no secrets anywhere in the repository: nothing shaped like a Telegram token, an API key or a private key.
@@ -39,11 +39,20 @@ for (const name of examples) {
   for (const line of dockerfile.split('\n').filter((entry) => entry.startsWith('FROM '))) {
     if (!/^FROM \S+@sha256:[a-f0-9]{64}( AS \S+)?$/.test(line)) fail(name, `FROM not pinned by digest: ${line}`);
   }
-  const user = dockerfile.split('\n').filter((line) => line.startsWith('USER ')).at(-1);
-  if (!user || /^USER (root|0)(:|$)/.test(user)) fail(name, 'the Dockerfile must end on a non-root USER');
-  for (const line of dockerfile.split('\n').filter((entry) => entry.startsWith('COPY '))) {
+  // The final stage (after the last FROM) is what runs: its last USER must not be root, or,
+  // without a USER line, its base must be an image that already runs as a regular user.
+  const lines = dockerfile.split('\n');
+  const finalStage = lines.slice(lines.findLastIndex((line) => line.startsWith('FROM ')));
+  const user = finalStage.filter((line) => line.startsWith('USER ')).at(-1);
+  const unprivilegedBase = /^FROM nginxinc\/nginx-unprivileged:/.test(finalStage[0] ?? '');
+  if (user ? /^USER (root|0)(:|$)/.test(user) : !unprivilegedBase) fail(name, 'the Dockerfile must end on a non-root USER');
+  for (const line of lines.filter((entry) => entry.startsWith('COPY ') && !/^COPY (--\S+ )*--from=/.test(entry))) {
     for (const source of line.replace(/^COPY /, '').split(/\s+/).slice(0, -1)) {
-      if (!source.startsWith('--') && !existsSync(join(dir, source))) fail(name, `COPY source not in the folder: ${source}`);
+      if (source.startsWith('--')) continue;
+      const found = source.includes('*')
+        ? readdirSync(dir).some((entry) => new RegExp(`^${source.replace(/[.+?^${}()|[\]\\]/g, '\\$&').replace(/\*/g, '.*')}$`).test(entry))
+        : existsSync(join(dir, source));
+      if (!found) fail(name, `COPY source not in the folder: ${source}`);
     }
   }
   if (files.includes('requirements.txt')) {
