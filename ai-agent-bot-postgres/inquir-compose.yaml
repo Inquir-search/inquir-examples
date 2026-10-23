@@ -1,0 +1,85 @@
+# A stack of two services: the AI assistant bot (./bot, its own inquir.yaml)
+# and the PostgreSQL that keeps its chat history.
+#
+#   inquir compose validate
+#   inquir compose up --input-file .env
+#
+# Values you supply are `inputs`; the database password is generated on the
+# server once per stack and never printed. References such as
+# {{services.db.privateHost}} are resolved only in `variables` and `buildArgs`.
+# Schema: https://github.com/Inquir-search/compute/blob/master/schemas/inquir-compose.yaml.json
+version: 1
+metadata:
+  title: { en: AI assistant in Telegram (with memory), ru: ИИ-ассистент в Telegram (с памятью) }
+  description:
+    en: An aiogram bot that answers through any OpenAI-compatible API and keeps chat history in PostgreSQL.
+    ru: Бот на aiogram отвечает через любой OpenAI-совместимый API и хранит историю чатов в PostgreSQL.
+  icon: bot
+  category: bot
+  docsUrl: https://inquir.org/docs/apps#telegram-bot
+  notes:
+    - en: Telegram bots run in the Netherlands.
+      ru: Telegram-боты размещаются в Нидерландах.
+
+inputs:
+  TELEGRAM_BOT_TOKEN:
+    label: { en: Telegram bot token, ru: Токен Telegram-бота }
+    hint: { en: Send /newbot to @BotFather., ru: Отправьте /newbot боту @BotFather. }
+    secret: true
+    required: true
+  OPENAI_API_KEY:
+    label: { en: Model provider API key, ru: Ключ API провайдера модели }
+    secret: true
+    required: true
+  OPENAI_BASE_URL:
+    label: { en: OpenAI-compatible API URL, ru: Адрес OpenAI-совместимого API }
+    default: https://api.openai.com/v1
+    pattern: https-url
+  MODEL:
+    label: { en: Model, ru: Модель }
+    default: gpt-5-mini
+    maxLength: 128
+  ALLOWED_USER_IDS:
+    label: { en: Allowed Telegram user IDs (optional), ru: Разрешённые Telegram ID (необязательно) }
+    hint: { en: Comma-separated. The bot shows your ID on /start., ru: Через запятую. Бот покажет ваш ID на /start. }
+    pattern: csv-integers
+
+generate:
+  db-password: { bytes: 24, encoding: hex }
+
+services:
+  db:
+    title: PostgreSQL
+    # Secrets go to variables: the generated password becomes a production-only secret variable.
+    variables:
+      POSTGRES_PASSWORD: "{{generated.db-password}}"
+    # Everything below is exactly an inquir.yaml `services.web` block.
+    imageRef: docker.io/library/postgres@sha256:eee6c6e1b0894fa4fe0075eb054af9fd1cf39a35321c2d4110626cfe506411fb # postgres:17-alpine
+    # Plain values that are not secret live in the block's own env.
+    env:
+      POSTGRES_USER: bot
+      POSTGRES_DB: bot
+      # The data directory is a subfolder of the volume: initdb wants an empty directory.
+      PGDATA: /var/lib/postgresql/data/pgdata
+    location: nl
+    runtime:
+      ports: [{ name: pg, port: 5432, protocol: tcp }]
+      volumes: [{ name: data, mountPath: /var/lib/postgresql/data, sizeMb: 1024 }]
+      resources: { memoryMb: 256, cpuVCpus: 0.25 }
+      healthcheck: { type: command, command: "pg_isready -U bot -d bot", intervalSeconds: 10, timeoutSeconds: 3 }
+      deployStrategy: recreate
+    networkPolicy: { ingress: private, egress: none }
+    scaling: { activation: always }
+
+  bot:
+    path: ./bot                      # its inquir.yaml: port 8080, /healthz, recreate, location nl, always on, private
+    title: Bot
+    dependsOn: [db]                  # starts once PostgreSQL serves
+    variables:
+      TELEGRAM_BOT_TOKEN: "{{inputs.TELEGRAM_BOT_TOKEN}}"
+      OPENAI_API_KEY: "{{inputs.OPENAI_API_KEY}}"
+      OPENAI_BASE_URL: "{{inputs.OPENAI_BASE_URL}}"
+      MODEL: "{{inputs.MODEL}}"
+      ALLOWED_USER_IDS: "{{inputs.ALLOWED_USER_IDS}}"
+      DATABASE_URL: "postgres://bot:{{generated.db-password}}@{{services.db.privateHost}}:{{services.db.ports.pg}}/bot"
+# No entrypoint: a polling bot has no public page.

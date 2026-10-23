@@ -1,6 +1,9 @@
 // Checks every example folder: run `node scripts/check.mjs` (or `make check`) before a pull request.
 //
 // - an inquir.yaml, a Dockerfile and a README.md (with Russian and English sections);
+// - a stack (a folder with an inquir-compose.yaml): its README.md, every imageRef pinned by digest in
+//   registry form (docker.io/library/postgres@sha256:...), and each service subfolder checked as above
+//   (an inquir.yaml and a Dockerfile; the stack's README.md covers it);
 // - every FROM pinned by digest, the final stage not running as root, every COPY source inside the folder;
 // - Python: requirements.txt pinned with hashes and installed with --require-hashes; the code compiles;
 // - Node: exact versions in package.json, a package-lock.json with an integrity hash per package; node --check;
@@ -29,12 +32,37 @@ function run(command, args) {
   }
 }
 
+function checkReadme(name, dir) {
+  const readme = existsSync(join(dir, 'README.md')) ? readFileSync(join(dir, 'README.md'), 'utf8') : '';
+  if (!readme) fail(name, 'missing README.md');
+  else if (!readme.includes('## Русский') || !readme.includes('## English')) fail(name, 'README.md needs "## Русский" and "## English" sections');
+}
+
 for (const name of examples) {
   const dir = join(root, name);
+  if (!existsSync(join(dir, 'inquir-compose.yaml'))) {
+    checkReadme(name, dir);
+    checkService(name, dir);
+    continue;
+  }
+  // A stack: the README is the stack's; every folder next to inquir-compose.yaml is one service.
+  checkReadme(name, dir);
+  const compose = readFileSync(join(dir, 'inquir-compose.yaml'), 'utf8');
+  for (const [, ref] of compose.matchAll(/^\s*imageRef:\s*(\S+)/gm)) {
+    if (!/^[a-z0-9-]+(\.[a-z0-9-]+)+(:\d+)?\/[a-z0-9._\/-]+@sha256:[a-f0-9]{64}$/.test(ref)) {
+      fail(name, `imageRef must be pinned by digest in registry form (docker.io/library/postgres@sha256:...): ${ref}`);
+    }
+  }
+  const services = readdirSync(dir, { withFileTypes: true }).filter((entry) => entry.isDirectory()).map((entry) => entry.name);
+  for (const [, path] of compose.matchAll(/^\s*path:\s*\.\/(\S+?)\/?\s*(#.*)?$/gm)) {
+    if (!services.includes(path)) fail(name, `path service ./${path} is not a folder here`);
+  }
+  for (const service of services) checkService(`${name}/${service}`, join(dir, service));
+}
+
+function checkService(name, dir) {
   const files = readdirSync(dir);
-  for (const required of ['inquir.yaml', 'Dockerfile', 'README.md']) if (!files.includes(required)) fail(name, `missing ${required}`);
-  const readme = files.includes('README.md') ? readFileSync(join(dir, 'README.md'), 'utf8') : '';
-  if (!readme.includes('## Русский') || !readme.includes('## English')) fail(name, 'README.md needs "## Русский" and "## English" sections');
+  for (const required of ['inquir.yaml', 'Dockerfile']) if (!files.includes(required)) fail(name, `missing ${required}`);
   const dockerfile = files.includes('Dockerfile') ? readFileSync(join(dir, 'Dockerfile'), 'utf8') : '';
   for (const line of dockerfile.split('\n').filter((entry) => entry.startsWith('FROM '))) {
     if (!/^FROM \S+@sha256:[a-f0-9]{64}( AS \S+)?$/.test(line)) fail(name, `FROM not pinned by digest: ${line}`);
