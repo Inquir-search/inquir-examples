@@ -9,7 +9,7 @@
 - `db` — PostgreSQL 17 (официальный образ, закреплён по digest) с томом на 1 ГБ. Пароль генерирует сервер при первом развёртывании; он нигде не печатается.
 - `bot` — папка [`bot/`](bot): `Dockerfile`, `bot.py` и свой `inquir.yaml` (регион `nl`, всегда включён, без публичного адреса). Запускается, когда база уже работает, и получает `DATABASE_URL`.
 
-Стеки пока в предварительном доступе: их включают для workspace по запросу в поддержку. `inquir compose validate` работает у всех. Для `up` из GitHub нужен CLI 0.4.5 или новее.
+Стеки пока в предварительном доступе: их включают для рабочего пространства по запросу в поддержку. `inquir compose validate` работает у всех. Для `up`, `status` и `down` нужен CLI 0.4.5 или новее — он скоро будет опубликован; до этого стек можно только проверить.
 
 ### Что понадобится
 
@@ -68,7 +68,7 @@ The same bot as [`ai-agent-bot`](../ai-agent-bot), together with its own Postgre
 - `db`: PostgreSQL 17 (the official image, pinned by digest) with a 1 GB volume. The server generates its password on the first deploy; it is never printed.
 - `bot`: the [`bot/`](bot) folder: `Dockerfile`, `bot.py` and its own `inquir.yaml` (location `nl`, always on, no public address). It starts once the database serves and gets `DATABASE_URL`.
 
-Stacks are in preview: they are enabled per workspace, on request to support. `inquir compose validate` works for everyone. `up` from GitHub needs CLI 0.4.5 or newer.
+Stacks are in preview: they are enabled per workspace, on request to support. `inquir compose validate` works for everyone. `up`, `status` and `down` need CLI 0.4.5 or newer, which will be published soon; until then you can only validate the stack.
 
 ### What you need
 

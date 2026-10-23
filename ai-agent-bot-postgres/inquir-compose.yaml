@@ -7,7 +7,7 @@
 # Values you supply are `inputs`; the database password is generated on the
 # server once per stack and never printed. References such as
 # {{services.db.privateHost}} are resolved only in `variables` and `buildArgs`.
-# Schema: https://github.com/Inquir-search/compute/blob/master/schemas/inquir-compose.yaml.json
+# The file format: https://inquir.org/docs/compose
 version: 1
 metadata:
   title: { en: AI assistant in Telegram (with memory), ru: ИИ-ассистент в Telegram (с памятью) }

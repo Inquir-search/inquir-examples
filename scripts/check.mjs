@@ -2,8 +2,8 @@
 //
 // - an inquir.yaml, a Dockerfile and a README.md (with Russian and English sections);
 // - a stack (a folder with an inquir-compose.yaml): its README.md, every imageRef pinned by digest in
-//   registry form (docker.io/library/postgres@sha256:...), and each service subfolder checked as above
-//   (an inquir.yaml and a Dockerfile; the stack's README.md covers it);
+//   registry form (docker.io/library/postgres@sha256:...), and each `path:` service folder (./bot,
+//   ./services/api) present and checked as above (an inquir.yaml and a Dockerfile; the stack's README.md covers it);
 // - every FROM pinned by digest, the final stage not running as root, every COPY source inside the folder;
 // - Python: requirements.txt pinned with hashes and installed with --require-hashes; the code compiles;
 // - Node: exact versions in package.json, a package-lock.json with an integrity hash per package; node --check;
@@ -45,7 +45,7 @@ for (const name of examples) {
     checkService(name, dir);
     continue;
   }
-  // A stack: the README is the stack's; every folder next to inquir-compose.yaml is one service.
+  // A stack: the README is the stack's; each path service's folder is checked like an example.
   checkReadme(name, dir);
   const compose = readFileSync(join(dir, 'inquir-compose.yaml'), 'utf8');
   for (const [, ref] of compose.matchAll(/^\s*imageRef:\s*(\S+)/gm)) {
@@ -53,11 +53,19 @@ for (const name of examples) {
       fail(name, `imageRef must be pinned by digest in registry form (docker.io/library/postgres@sha256:...): ${ref}`);
     }
   }
-  const services = readdirSync(dir, { withFileTypes: true }).filter((entry) => entry.isDirectory()).map((entry) => entry.name);
-  for (const [, path] of compose.matchAll(/^\s*path:\s*\.\/(\S+?)\/?\s*(#.*)?$/gm)) {
-    if (!services.includes(path)) fail(name, `path service ./${path} is not a folder here`);
+  // Each `path:` service (./bot, ./services/api, quoted or not) is a folder of the stack, checked as an example.
+  for (const [, double, single, plain] of compose.matchAll(/^\s*path:\s*(?:"([^"]*)"|'([^']*)'|([^\s#'"]+))/gm)) {
+    const raw = double ?? single ?? plain;
+    if (raw.startsWith('/')) continue; // an HTTP path (healthcheck.path), not a service folder
+    const path = raw.replace(/^\.\//, '').replace(/\/+$/, '');
+    if (!path || path.split('/').some((segment) => !segment || segment === '.' || segment === '..')) {
+      fail(name, `path service ${raw} must be a folder inside the stack, like ./api`);
+      continue;
+    }
+    const folder = join(dir, ...path.split('/'));
+    if (!existsSync(folder) || !statSync(folder).isDirectory()) fail(name, `path service ./${path} is not a folder here`);
+    else checkService(`${name}/${path}`, folder);
   }
-  for (const service of services) checkService(`${name}/${service}`, join(dir, service));
 }
 
 function checkService(name, dir) {
